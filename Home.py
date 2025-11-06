@@ -106,7 +106,7 @@ else:
     * **Log Audit (Enkripsi Log):** `DES` (Setiap aktivitas Anda dicatat dan dienkripsi untuk audit).
     * **Enkripsi Transaksi:** `Vigenere Cipher + Blowfish` (Metode 'Super Enkripsi' untuk data Pemasukan/Pengeluaran).
     * **Enkripsi Struk/Bukti:** `CAST-128` (Mengamankan file laporan, invoice, atau struk PDF/JPG).
-    * **Sisip Data / Watermark:** `PVD` (Menyisipkan data audit atau watermark tak terlihat pada file gambar).
+    * **Sisip Data / Watermark:** `LSB + RC4` (Menyisipkan data audit atau watermark tak terlihat pada file gambar).
     """)
     
     st.divider()

@@ -1,5 +1,5 @@
 import string
-from Crypto.Cipher import DES, Blowfish, CAST
+from Crypto.Cipher import DES, Blowfish, CAST, ARC4
 from Crypto.Util.Padding import pad, unpad
 from Crypto.Random import get_random_bytes
 from PIL import Image
@@ -99,186 +99,119 @@ def cast_decrypt_file(file_bytes, key):
     except ValueError:
         return None
 
-# 4. Steganografi (PVD)
-QUANTIZATION_TABLE = [
-    (0, 7, 3),
-    (8, 15, 3),
-    (16, 31, 4),
-    (32, 63, 5),
-    (64, 127, 6),
-    (128, 255, 7)
-]
-
-def find_range(diff):
-    """Mencari range yang sesuai untuk nilai perbedaan."""
-    diff = abs(diff)
-    for (lower, upper, bits) in QUANTIZATION_TABLE:
-        if lower <= diff <= upper:
-            return (lower, upper, bits)
-    return None # Seharusnya tidak terjadi jika tabel lengkap
-
+# Helper untuk mengubah data (string, bytes) ke binary string
 def data_to_binary(data):
-    """Konversi string ke binary."""
+    """Konversi string atau bytes ke binary string."""
     if isinstance(data, str):
         return ''.join(format(ord(i), '08b') for i in data)
     elif isinstance(data, bytes) or isinstance(data, bytearray):
         return ''.join(format(i, '08b') for i in data)
     raise TypeError("Tipe data tidak didukung.")
 
-def binary_to_string(binary_data):
-    """Konversi binary kembali ke string."""
-    all_bytes = [binary_data[i:i+8] for i in range(0, len(binary_data), 8)]
-    decoded_message = ""
-    for byte in all_bytes:
-        if len(byte) == 8:
+# Helper untuk mengubah binary string kembali ke bytes
+def binary_to_bytes(binary_data):
+    """Konversi binary string kembali ke bytes."""
+    all_bytes = []
+    for i in range(0, len(binary_data), 8):
+        byte_str = binary_data[i:i+8]
+        if len(byte_str) == 8:
             try:
-                decoded_message += chr(int(byte, 2))
+                all_bytes.append(int(byte_str, 2))
             except ValueError:
-                pass # Mengabaikan byte yang tidak lengkap/valid di akhir
-    return decoded_message
+                pass # Abaikan byte tidak lengkap
+    return bytearray(all_bytes)
 
-def pvd_hide_message(image, secret_message):
-    """Menyembunyikan pesan menggunakan PVD."""
+def lsb_rc4_hide(image, secret_message, key):
+    """Menyisipkan pesan rahasia ke gambar menggunakan LSB, dienkripsi dengan RC4."""
     img = image.copy()
     if img.mode != 'RGB':
         img = img.convert('RGB')
-        
-    pixels = list(img.getdata())
-    width, height = img.size
+
+    # 1. Enkripsi pesan dengan RC4
+    try:
+        key_bytes = key.encode('utf-8')
+        cipher = ARC4.new(key_bytes)
+        message_bytes = secret_message.encode('utf-8')
+        encrypted_data = cipher.encrypt(message_bytes)
+    except Exception as e:
+        raise ValueError(f"Error RC4 Encryption: {e}")
+
+    # 2. Tambahkan delimiter unik (8 null bytes)
+    # Ini untuk menandai akhir dari pesan rahasia
+    data_to_hide = encrypted_data + b'\x00\x00\x00\x00\x00\x00\x00\x00'
     
-    # 1. Siapkan data binary
-    binary_message = data_to_binary(secret_message)
-    binary_message_len = len(binary_message)
-    
-    # Sembunyikan panjang pesan (32 bits) di awal
-    binary_len_header = format(binary_message_len, '032b')
-    binary_data_to_hide = binary_len_header + binary_message
+    # 3. Ubah data terenkripsi ke binary string
+    binary_data = data_to_binary(data_to_hide)
     
     data_index = 0
+    img_data = list(img.getdata())
     new_pixels = []
     
-    # Iterasi per piksel (bukan per blok 2x1)
-    # Kita akan proses channel R, G, B secara terpisah
-    # (P, Q) adalah pasangan piksel
-    
-    flat_pixels = [p for pixel in pixels for p in pixel] # [R1, G1, B1, R2, G2, B2, ...]
-
-    if len(binary_data_to_hide) > (len(flat_pixels) // 2) * 7: # Asumsi max bits
+    if len(binary_data) > len(img_data) * 3:
         raise ValueError("Pesan terlalu besar untuk gambar ini.")
 
-    i = 0
-    while i < len(flat_pixels) - 1 and data_index < len(binary_data_to_hide):
-        p1 = flat_pixels[i]
-        p2 = flat_pixels[i+1]
+    for pixel in img_data:
+        if data_index >= len(binary_data):
+            new_pixels.append(pixel)
+            continue
         
-        diff = p1 - p2
-        lower, upper, n_bits = find_range(diff)
-        
-        if data_index + n_bits <= len(binary_data_to_hide):
-            bits_to_embed_str = binary_data_to_hide[data_index : data_index + n_bits]
-            bits_to_embed_int = int(bits_to_embed_str, 2)
-            
-            # Hitung perbedaan baru
-            new_diff = lower + bits_to_embed_int if diff >= 0 else -(lower + bits_to_embed_int)
-            
-            # Hitung nilai piksel baru
-            m = new_diff - diff
-            p1_new = p1 + math.ceil(m / 2)
-            p2_new = p2 - math.floor(m / 2)
-            
-            # Penanganan Overflow/Underflow
-            if p1_new > 255: 
-                p1_new, p2_new = 255, 255 - new_diff
-            elif p1_new < 0:
-                p1_new, p2_new = 0, 0 - new_diff
-            
-            if p2_new > 255:
-                p2_new, p1_new = 255, 255 + new_diff
-            elif p2_new < 0:
-                p2_new, p1_new = 0, 0 + new_diff
+        # (R, G, B)
+        new_pix = []
+        for i in range(3): # Loop R, G, B
+            if data_index < len(binary_data):
+                # Ambil nilai pixel (misal 254 -> 11111110)
+                # Ubah LSB (bit terakhir)
+                # (pixel[i] & ~1) -> Meng-nol-kan bit terakhir
+                # | int(binary_data[data_index]) -> Men-set bit terakhir ke bit data
+                new_val = (pixel[i] & ~1) | int(binary_data[data_index])
+                new_pix.append(new_val)
+                data_index += 1
+            else:
+                new_pix.append(pixel[i])
+                
+        new_pixels.append(tuple(new_pix))
 
-            # Pastikan clipping terakhir
-            p1_new = max(0, min(255, p1_new))
-            p2_new = max(0, min(255, p2_new))
-
-            flat_pixels[i] = p1_new
-            flat_pixels[i+1] = p2_new
-            
-            data_index += n_bits
-        
-        # Pindah ke pasangan berikutnya (lewati 2 piksel)
-        i += 2
-
-    if data_index < len(binary_data_to_hide):
+    if data_index < len(binary_data):
          raise ValueError("Tidak cukup ruang untuk menyembunyikan seluruh pesan (error iterasi).")
-
-    # Rekonstruksi tuple piksel
-    final_pixel_tuples = []
-    for j in range(0, len(flat_pixels), 3):
-        if j+2 < len(flat_pixels):
-            final_pixel_tuples.append(tuple(flat_pixels[j:j+3]))
-
-    img_stego = Image.new('RGB', (width, height))
-    img_stego.putdata(final_pixel_tuples)
+         
+    img_stego = Image.new('RGB', img.size)
+    img_stego.putdata(new_pixels)
     return img_stego
 
-
-def pvd_reveal_message(image):
-    """Mengungkap pesan dari gambar PVD."""
+def lsb_rc4_reveal(image, key):
+    """Mengekstrak pesan rahasia dari gambar LSB, didekripsi dengan RC4."""
     img = image.copy()
     if img.mode != 'RGB':
         img = img.convert('RGB')
         
-    pixels = list(img.getdata())
-    flat_pixels = [p for pixel in pixels for p in pixel] # [R1, G1, B1, R2, G2, B2, ...]
-
-    binary_extracted_data = ""
+    img_data = list(img.getdata())
+    binary_data = ""
     
-    # 1. Ekstrak Header Panjang Pesan (32 bits pertama)
-    i = 0
-    binary_len_header = ""
-    while i < len(flat_pixels) - 1 and len(binary_len_header) < 32:
-        p1 = flat_pixels[i]
-        p2 = flat_pixels[i+1]
-        
-        diff = p1 - p2
-        lower, upper, n_bits = find_range(diff)
-        
-        # Ambil n_bits dari |diff|
-        bits_to_extract_int = abs(diff) - lower
-        bits_to_extract_str = format(bits_to_extract_int, f'0{n_bits}b')
-        
-        binary_len_header += bits_to_extract_str
-        i += 2
+    # Delimiter (8 null bytes) dalam binary
+    delimiter_binary = '00000000' * 8 
 
-    if len(binary_len_header) < 32:
-        return None # Gambar terlalu kecil atau bukan stego PVD
+    for pixel in img_data:
+        for i in range(3): # R, G, B
+            # Ekstrak LSB (bit terakhir) dan tambahkan ke string binary
+            binary_data += str(pixel[i] & 1)
+            
+            # Cek apakah delimiter sudah ditemukan
+            if binary_data.endswith(delimiter_binary):
+                # Hapus delimiter dari data
+                binary_data = binary_data[:-len(delimiter_binary)]
+                
+                # Ubah binary ke bytes
+                encrypted_bytes = binary_to_bytes(binary_data)
+                
+                # 4. Dekripsi dengan RC4
+                try:
+                    key_bytes = key.encode('utf-8')
+                    cipher = ARC4.new(key_bytes)
+                    decrypted_data = cipher.decrypt(encrypted_bytes)
+                    return decrypted_data.decode('utf-8')
+                except Exception as e:
+                    # Gagal dekripsi (kunci salah)
+                    return None
 
-    binary_len_header = binary_len_header[:32]
-    try:
-        message_length = int(binary_len_header, 2)
-    except ValueError:
-        return None # Header korup
-
-    # 2. Ekstrak Sisa Pesan
-    # 'i' sekarang menunjuk ke piksel setelah header
-    binary_message_data = ""
-    while i < len(flat_pixels) - 1 and len(binary_message_data) < message_length:
-        p1 = flat_pixels[i]
-        p2 = flat_pixels[i+1]
-        
-        diff = p1 - p2
-        lower, upper, n_bits = find_range(diff)
-        
-        bits_to_extract_int = abs(diff) - lower
-        bits_to_extract_str = format(bits_to_extract_int, f'0{n_bits}b')
-        
-        binary_message_data += bits_to_extract_str
-        i += 2
-        
-    if len(binary_message_data) < message_length:
-        return None # Pesan tidak lengkap
-        
-    binary_message_data = binary_message_data[:message_length]
-    
-    return binary_to_string(binary_message_data)
+    # Jika loop selesai tanpa menemukan delimiter
+    return None
