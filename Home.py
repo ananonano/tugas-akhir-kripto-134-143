@@ -119,7 +119,7 @@ else:
         1.  **Home:** Halaman ini yang sedang Anda lihat.
         2.  **Catat Transaksi:** Menu untuk mencatat Pemasukan/Pengeluaran. Data (Tipe, Nominal, Keterangan) akan dienkripsi berlapis menggunakan **Vigenere + Blowfish**.
         3.  **Enkripsi Struk:** Menu untuk mengamankan file (PDF, JPG, dll) seperti bukti transfer atau invoice menggunakan **CAST-128**.
-        4.  **Sisipkan Data (LSB + RC4):** Menu untuk menyembunyikan catatan rahasia (misal: ID transaksi) ke dalam gambar `.png` menggunakan **PVD**.
+        4.  **Sisipkan Data (LSB + RC4):** Menu untuk menyembunyikan catatan rahasia (misal: ID transaksi) ke dalam gambar `.png`.
         5.  **Laporan Audit:** Melihat ringkasan total Pemasukan/Pengeluaran Anda, beserta riwayat lengkap semua aktivitas keamanan. Log ini dienkripsi di database menggunakan **DES**.
         6.  **Logout:** Tombol di sidebar untuk keluar dari sesi Anda.
         """)
