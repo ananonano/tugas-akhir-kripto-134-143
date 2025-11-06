@@ -99,7 +99,8 @@ def cast_decrypt_file(file_bytes, key):
     except ValueError:
         return None
 
-# Helper untuk mengubah data (string, bytes) ke binary string
+# 4. Steganografi (LSB + RC4)
+# mengubah data (string, bytes) ke binary string
 def data_to_binary(data):
     """Konversi string atau bytes ke binary string."""
     if isinstance(data, str):
@@ -108,7 +109,7 @@ def data_to_binary(data):
         return ''.join(format(i, '08b') for i in data)
     raise TypeError("Tipe data tidak didukung.")
 
-# Helper untuk mengubah binary string kembali ke bytes
+#mengubah binary string kembali ke bytes
 def binary_to_bytes(binary_data):
     """Konversi binary string kembali ke bytes."""
     all_bytes = []
@@ -118,7 +119,7 @@ def binary_to_bytes(binary_data):
             try:
                 all_bytes.append(int(byte_str, 2))
             except ValueError:
-                pass # Abaikan byte tidak lengkap
+                pass 
     return bytearray(all_bytes)
 
 def lsb_rc4_hide(image, secret_message, key):
@@ -137,7 +138,6 @@ def lsb_rc4_hide(image, secret_message, key):
         raise ValueError(f"Error RC4 Encryption: {e}")
 
     # 2. Tambahkan delimiter unik (8 null bytes)
-    # Ini untuk menandai akhir dari pesan rahasia
     data_to_hide = encrypted_data + b'\x00\x00\x00\x00\x00\x00\x00\x00'
     
     # 3. Ubah data terenkripsi ke binary string
@@ -155,14 +155,9 @@ def lsb_rc4_hide(image, secret_message, key):
             new_pixels.append(pixel)
             continue
         
-        # (R, G, B)
         new_pix = []
         for i in range(3): # Loop R, G, B
             if data_index < len(binary_data):
-                # Ambil nilai pixel (misal 254 -> 11111110)
-                # Ubah LSB (bit terakhir)
-                # (pixel[i] & ~1) -> Meng-nol-kan bit terakhir
-                # | int(binary_data[data_index]) -> Men-set bit terakhir ke bit data
                 new_val = (pixel[i] & ~1) | int(binary_data[data_index])
                 new_pix.append(new_val)
                 data_index += 1
@@ -187,20 +182,15 @@ def lsb_rc4_reveal(image, key):
     img_data = list(img.getdata())
     binary_data = ""
     
-    # Delimiter (8 null bytes) dalam binary
     delimiter_binary = '00000000' * 8 
 
     for pixel in img_data:
         for i in range(3): # R, G, B
-            # Ekstrak LSB (bit terakhir) dan tambahkan ke string binary
             binary_data += str(pixel[i] & 1)
             
-            # Cek apakah delimiter sudah ditemukan
             if binary_data.endswith(delimiter_binary):
-                # Hapus delimiter dari data
                 binary_data = binary_data[:-len(delimiter_binary)]
                 
-                # Ubah binary ke bytes
                 encrypted_bytes = binary_to_bytes(binary_data)
                 
                 # 4. Dekripsi dengan RC4
@@ -210,8 +200,6 @@ def lsb_rc4_reveal(image, key):
                     decrypted_data = cipher.decrypt(encrypted_bytes)
                     return decrypted_data.decode('utf-8')
                 except Exception as e:
-                    # Gagal dekripsi (kunci salah)
                     return None
 
-    # Jika loop selesai tanpa menemukan delimiter
     return None

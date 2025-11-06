@@ -1,4 +1,3 @@
-# Nama file: Home.py
 import streamlit as st
 from database import init_db, get_user_from_db, add_user_to_db
 from auth import hash_password_sha1, verify_password_sha1
@@ -39,7 +38,7 @@ if not st.session_state['logged_in']:
                 st.session_state['logged_in'] = True
                 st.session_state['username'] = user[1]
                 st.session_state['user_id'] = user[0]
-                st.rerun() # Memuat ulang halaman ke state "logged in"
+                st.rerun() 
             else:
                 st.error("Username atau password salah.")
 
@@ -70,7 +69,7 @@ else:
     st.write("Gunakan menu di sidebar untuk mengamankan data keuangan Anda.")
     st.divider() 
 
-    # Informasi Kelompok (Biarkan, ini info Anda)
+    # Informasi Kelompok 
     st.markdown("<h2 style='text-align: center;'>Kelompok 8</h2>", unsafe_allow_html=True)
     st.write("")
     margin_kiri, col1, col2, margin_kanan = st.columns([2, 2, 2, 2]) 

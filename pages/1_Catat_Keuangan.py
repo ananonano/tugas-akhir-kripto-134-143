@@ -1,4 +1,3 @@
-# Nama file: pages/1_Catat_Transaksi.py
 import streamlit as st
 from crypto_modules import super_encrypt, super_decrypt
 from database import add_history_entry
@@ -48,9 +47,7 @@ with tab1:
                 st.code(encrypted_text, language=None)
                 st.success("Data transaksi berhasil dienkripsi!")
                 
-                # 3. Simpan log untuk audit (ini yang akan dibaca di halaman Laporan)
-                # Kita simpan data MENTAH (sebelum super-enkripsi) ke log
-                # Log ini akan dienkripsi oleh DES secara otomatis oleh add_history_entry
+                # 3. Simpan log untuk audit
                 log_data_json_string = json.dumps(data)
                 add_history_entry(user_id, "Catat Transaksi", log_data_json_string)
                 
@@ -76,7 +73,7 @@ with tab2:
                 
                 st.subheader("Hasil Dekripsi Transaksi:")
                 
-                # Coba parse JSON, jika gagal, tampilkan teks biasa (untuk data lama)
+                # Coba parse JSON
                 try:
                     data = json.loads(decrypted_text)
                     st.json(data)

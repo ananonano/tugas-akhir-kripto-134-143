@@ -1,6 +1,5 @@
 # Nama file: pages/3_Sisipkan_Data_LSB.py
 import streamlit as st
-# --- PERBAIKAN IMPORT ---
 from crypto_modules import lsb_rc4_hide, lsb_rc4_reveal
 from database import add_history_entry, get_user_history
 from PIL import Image
@@ -59,7 +58,6 @@ with tab1:
         if cover_image and secret_message and rc4_key_e:
             try:
                 img = Image.open(cover_image)
-                # --- PANGGIL FUNGSI BARU ---
                 stego_img = lsb_rc4_hide(img, secret_message, rc4_key_e) 
                 
                 st.subheader("Gambar Stego Berhasil Dibuat:")
@@ -80,10 +78,9 @@ with tab1:
                 log_data = {
                     "file_name": cover_image.name,
                     "message_hint": secret_message[:20] + "...",
-                    "key_hint": key_hint, # --- TAMBAHAN LOG ---
+                    "key_hint": key_hint,
                     "linked_tx_id": selected_tx_id
                 }
-                # --- NAMA LOG BARU ---
                 add_history_entry(user_id, "LSB-RC4 Hide", json.dumps(log_data))
                 
             except ValueError as e:
@@ -105,14 +102,13 @@ with tab2:
     
     stego_image_file = st.file_uploader("Upload Gambar Stego (.png):", type=['png'], key="lsb_stego")
     
-    # --- TAMBAHAN INPUT KUNCI ---
+    #TAMBAHAN INPUT KUNCI
     rc4_key_d = st.text_input("Kunci RC4:", key="lsb_key_d", type="password")
 
     if st.button("Ekstrak"):
         if stego_image_file and rc4_key_d:
             try:
                 img = Image.open(stego_image_file)
-                # --- PANGGIL FUNGSI BARU ---
                 revealed_message = lsb_rc4_reveal(img, rc4_key_d) 
                 
                 if revealed_message is not None:
@@ -124,7 +120,6 @@ with tab2:
                         "revealed_hint": revealed_message[:20] + "...",
                         "linked_tx_id": selected_tx_id_d
                     }
-                    # --- NAMA LOG BARU ---
                     add_history_entry(user_id, "LSB-RC4 Reveal", json.dumps(log_data))
                 else:
                     st.error("Tidak ada data tersembunyi yang ditemukan (gambar ini mungkin bukan stego LSB atau kunci RC4 salah).")

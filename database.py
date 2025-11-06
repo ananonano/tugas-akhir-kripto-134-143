@@ -1,11 +1,10 @@
 import streamlit as st
-import mysql.connector # Kita masih butuh ini untuk 'Error'
+import mysql.connector 
 import datetime
 from crypto_modules import des_encrypt, des_decrypt
 import pandas as pd
-from sqlalchemy import text # Pastikan ini ada
+from sqlalchemy import text 
 
-# Kunci DES tetap di sini
 DB_HISTORY_KEY = b'MySecret' 
 
 @st.cache_resource
@@ -115,9 +114,7 @@ def add_history_entry(user_id, action_type, log_details):
         st.error(f"Error adding history: {e}", icon="🚨")
         return False
 
-# ==========================================================
-# INI FUNGSI YANG UDAH DIBENERIN (FIX KEYERROR: 'id')
-# ==========================================================
+
 def get_user_history(user_id):
     """Mengambil dan mendekripsi history untuk user tertentu."""
     conn = get_db_connection()
@@ -125,19 +122,15 @@ def get_user_history(user_id):
 
     history_list = []
     try:
-        # 1. PERBAIKAN: Tambahkan 'id' di SELECT
         query = "SELECT id, timestamp, action_type, encrypted_log_entry FROM history WHERE user_id = :uid ORDER BY timestamp DESC"
         df = conn.query(query, params={"uid": user_id}, ttl=0) 
 
-        # Loop DataFrame-nya
         for row in df.itertuples(index=False):
-            # 2. PERBAIKAN: Ambil 'id' dari row
             id, timestamp, action_type, encrypted_log = row
             
             try:
                 decrypted_log = des_decrypt(encrypted_log, DB_HISTORY_KEY).decode('utf-8')
                 
-                # 3. PERBAIKAN: Masukkan 'id' ke dictionary
                 history_list.append({
                     "id": id, # <-- INI DIA
                     "timestamp": timestamp,

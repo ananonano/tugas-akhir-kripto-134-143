@@ -1,4 +1,3 @@
-# Nama file: pages/4_Laporan_Audit.py
 import streamlit as st
 from database import get_user_history
 import pandas as pd
@@ -16,7 +15,6 @@ st.title(f"Laporan Audit Keuangan {st.session_state['username']}")
 user_id = st.session_state['user_id']
 history_data = get_user_history(user_id) # Ini sudah diurutkan (DESC) oleh database
 
-# --- Logika Baru untuk Menautkan Log ---
 total_pemasukan = 0.0
 total_pengeluaran = 0.0
 linked_activities_map = defaultdict(list)
