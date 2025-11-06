@@ -1,4 +1,3 @@
-# Nama file: pages/3_Sisipkan_Data_LSB.py
 import streamlit as st
 from crypto_modules import lsb_rc4_hide, lsb_rc4_reveal
 from database import add_history_entry, get_user_history
@@ -16,7 +15,6 @@ st.title("Penyisipan Data Gambar (LSB + RC4)")
 st.caption("Menyisipkan data rahasia terenkripsi (watermark/ID) ke dalam gambar (misal: bukti transfer).")
 user_id = st.session_state['user_id']
 
-# --- FUNGSI HELPER (Sama seperti sebelumnya) ---
 def get_transaction_options(user_id):
     all_history = get_user_history(user_id)
     transaction_logs = [entry for entry in all_history if entry['action'] == "Catat Transaksi"]
@@ -26,7 +24,7 @@ def get_transaction_options(user_id):
     for entry in transaction_logs:
         try:
             data = json.loads(entry['details'])
-            tx_id = entry['id'] # <-- Membaca ID dari history
+            tx_id = entry['id'] 
             display_str = f"{entry['timestamp'].strftime('%Y-%m-%d %H:%M')} - {data.get('keterangan', 'N/A')} (Rp {data.get('nominal', 0):,.0f})"
             options[display_str] = tx_id
         except (json.JSONDecodeError, TypeError, KeyError):
@@ -51,7 +49,6 @@ with tab1:
     cover_image = st.file_uploader("Upload Gambar Cover (.png):", type=['png'], key="lsb_cover")
     secret_message = st.text_area("Data Rahasia (misal: ID Transaksi):", key="lsb_msg")
     
-    # --- TAMBAHAN INPUT KUNCI ---
     rc4_key_e = st.text_input("Kunci RC4:", key="lsb_key_e", type="password")
     
     if st.button("Sisipkan"):
