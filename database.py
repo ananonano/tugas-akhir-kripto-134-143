@@ -1,10 +1,11 @@
 import streamlit as st
-import mysql.connector
+import mysql.connector # Kita masih butuh ini untuk 'Error'
 import datetime
 from crypto_modules import des_encrypt, des_decrypt
 import pandas as pd
-from sqlalchemy import text
+from sqlalchemy import text # Pastikan ini ada
 
+# Kunci DES tetap di sini
 DB_HISTORY_KEY = b'MySecret' 
 
 @st.cache_resource
@@ -58,7 +59,6 @@ def add_user_to_db(username, password_hash):
     try:
         with conn.session as s:
             query = "INSERT INTO users (username, password_hash) VALUES (:username, :pass_hash)"
-
             s.execute(text(query), params={"username": username, "pass_hash": password_hash})
             s.commit()
         return True
@@ -82,8 +82,7 @@ def get_user_from_db(username):
             return None
         else:
             user_data = tuple(df.iloc[0])
-            user_data = (int(user_data[0]), user_data[1], user_data[2])
-
+            user_data = (int(user_data[0]), user_data[1], user_data[2]) # Fix int64
             return user_data
             
     except mysql.connector.Error as e:
@@ -116,6 +115,9 @@ def add_history_entry(user_id, action_type, log_details):
         st.error(f"Error adding history: {e}", icon="🚨")
         return False
 
+# ==========================================================
+# INI FUNGSI YANG UDAH DIBENERIN (FIX KEYERROR: 'id')
+# ==========================================================
 def get_user_history(user_id):
     """Mengambil dan mendekripsi history untuk user tertentu."""
     conn = get_db_connection()
@@ -123,27 +125,34 @@ def get_user_history(user_id):
 
     history_list = []
     try:
-        query = "SELECT timestamp, action_type, encrypted_log_entry FROM history WHERE user_id = :uid ORDER BY timestamp DESC"
+        # 1. PERBAIKAN: Tambahkan 'id' di SELECT
+        query = "SELECT id, timestamp, action_type, encrypted_log_entry FROM history WHERE user_id = :uid ORDER BY timestamp DESC"
         df = conn.query(query, params={"uid": user_id}, ttl=0) 
 
+        # Loop DataFrame-nya
         for row in df.itertuples(index=False):
-            timestamp, action_type, encrypted_log = row
+            # 2. PERBAIKAN: Ambil 'id' dari row
+            id, timestamp, action_type, encrypted_log = row
             
             try:
                 decrypted_log = des_decrypt(encrypted_log, DB_HISTORY_KEY).decode('utf-8')
+                
+                # 3. PERBAIKAN: Masukkan 'id' ke dictionary
                 history_list.append({
+                    "id": id, # <-- INI DIA
                     "timestamp": timestamp,
                     "action": action_type,
                     "details": decrypted_log
                 })
             except Exception as e:
                 history_list.append({
+                    "id": id, # <-- INI DIA
                     "timestamp": timestamp,
                     "action": action_type,
                     "details": f"[Error dekripsi log: {e}]"
                 })
                 
     except mysql.connector.Error as e:
-        st.error(f"Error getting history: {e}", icon="🚨")
+        st.error(f"Error getting history: {e}")
         
     return history_list
