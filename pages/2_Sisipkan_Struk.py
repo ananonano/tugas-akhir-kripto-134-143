@@ -5,7 +5,7 @@ import json
 
 st.set_page_config(page_title="Enkripsi Struk", layout="wide")
 
-# === 1. PENGECEKAN SESI LOGIN ===
+# 1. PENGECEKAN SESI LOGIN
 if not st.session_state.get('logged_in', False):
     st.error("Anda harus login untuk mengakses halaman ini.")
     st.stop()
@@ -88,7 +88,6 @@ with tab2:
     uploaded_file_d = st.file_uploader("Upload Struk terenkripsi (.enc):", key="tf_file_d")
     tf_key_d = st.text_input("Kunci CAST-128 (16 bytes):", key="tf_key_d").encode('utf-8')
 
-    # Tombol "Dekripsi File"
     if st.button("Dekripsi File"):
         if uploaded_file_d and tf_key_d and len(tf_key_d) == 16:
             file_bytes = uploaded_file_d.getvalue()
