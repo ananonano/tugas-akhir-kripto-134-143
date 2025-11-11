@@ -82,8 +82,10 @@ def super_decrypt(super_ciphertext, vigenere_key, blowfish_key):
         # Tahap 2: Vigenere Dekripsi
         vigenere_decrypted = vigenere_decrypt(blowfish_decrypted.decode('utf-8'), vigenere_key)
         return vigenere_decrypted
+    except (ValueError, TypeError, UnicodeDecodeError):
+        raise ValueError("Gagal dekripsi. Pastikan Kunci Vigenere dan Kunci Blowfish Anda sudah benar.")
     except Exception as e:
-        return f"Error dekripsi: {e}. Pastikan kunci benar dan data tidak rusak."
+        raise Exception(f"Terjadi error tidak dikenal: {e}")
 
 # 3. Enkripsi File (CAST-128)
 def cast_encrypt_file(file_bytes, key):

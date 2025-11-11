@@ -21,7 +21,7 @@ with tab1:
     
     tipe_transaksi = st.selectbox("Tipe Transaksi", ["Pemasukan", "Pengeluaran"])
     nominal = st.number_input("Nominal (Rp)", min_value=0.0, step=1000.0)
-    keterangan = st.text_input("Keterangan Singkat")
+    keterangan = st.text_input("Keterangan")
     
     st.divider()
     st.subheader("Kunci Keamanan")
@@ -41,7 +41,7 @@ with tab1:
                 encrypted_data = super_encrypt(plain_text, v_key, b_key)
                 encrypted_text = base64.b64encode(encrypted_data).decode('utf-8')
                 
-                st.subheader("Data Transaksi Terenkripsi (Base64):")
+                st.subheader("Data Transaksi Terenkripsi:")
                 st.code(encrypted_text, language=None)
                 st.success("Data transaksi berhasil dienkripsi!")
 
@@ -51,11 +51,11 @@ with tab1:
             except Exception as e:
                 st.error(f"Error: {e}. Pastikan kunci Blowfish valid (8-56 bytes).")
         else:
-            st.warning("Pastikan semua field (Tipe, Nominal, Keterangan, Kunci V/B) diisi dengan benar.")
+            st.warning("Pastikan semua field (Tipe, Nominal, Keterangan, Kunci Vigenere dan Blowfish) diisi dengan benar.")
 
 with tab2:
     st.header("Lihat Transaksi (Dekripsi)")
-    cipher_text_b64 = st.text_area("Masukkan Data Transaksi (Base64) di sini:", key="se_cipher")
+    cipher_text_b64 = st.text_area("Masukkan Data Transaksi di sini:", key="se_cipher")
     
     st.divider()
     st.subheader("Kunci Keamanan")
@@ -64,39 +64,39 @@ with tab2:
 
     if st.button("Dekripsi Transaksi"):
         if cipher_text_b64 and v_key_d.isalpha() and len(b_key_d) >= 8:
+
             try:
                 cipher_data = base64.b64decode(cipher_text_b64)
+
                 decrypted_text = super_decrypt(cipher_data, v_key_d, b_key_d)
-                
+
                 st.subheader("Hasil Dekripsi Transaksi:")
+                data = json.loads(decrypted_text)
+                
+                tipe = data.get("tipe", "N/A")
+                nominal = float(data.get("nominal", 0))
+                keterangan = data.get("keterangan", "N/A")
 
-                try:
-                    data = json.loads(decrypted_text)
+                st.info(f"**Tipe Transaksi:** {tipe}")
+                
+                if tipe == "Pemasukan":
+                    st.metric(label="Nominal", value=f"Rp {nominal:,.2f}", delta=f"Rp {nominal:,.2f}")
+                else:
+                    st.metric(label="Nominal", value=f"Rp {nominal:,.2f}", delta=f"-Rp {nominal:,.2f}", delta_color="inverse")
                     
-                    tipe = data.get("tipe", "N/A")
-                    nominal = float(data.get("nominal", 0))
-                    keterangan = data.get("keterangan", "N/A")
-
-                    st.info(f"**Tipe Transaksi:** {tipe}")
-                    
-                    if tipe == "Pemasukan":
-                        st.metric(label="Nominal", value=f"Rp {nominal:,.2f}", delta=f"Rp {nominal:,.2f}")
-                    else:
-                        st.metric(label="Nominal", value=f"Rp {nominal:,.2f}", delta=f"-Rp {nominal:,.2f}", delta_color="inverse")
-                        
-                    st.info(f"**Keterangan:** {keterangan}")
-
-                except json.JSONDecodeError:
-                    st.error(f"Gagal mem-parsing JSON. Data mentah: {decrypted_text}")
+                st.info(f"**Keterangan:** {keterangan}")
                 
                 # Simpan history
                 log = f"Mendekripsi data: '{cipher_text_b64[:20]}...'"
                 add_history_entry(user_id, "Dekripsi Transaksi", log)
-                
+
+            except (ValueError, TypeError) as e:
+                st.error(f"Gagal: {e}")
             except Exception as e:
-                st.error(f"Error dekripsi: {e}. Pastikan kunci dan data Base64 benar.")
+                st.error(f"Terjadi error tidak dikenal: {e}")
+            
         else:
-            st.warning("Pastikan semua field (Data, Kunci V/B) diisi dengan benar.")
+            st.warning("Pastikan semua field (Data, Kunci Vigenere dan Blowfish) diisi dengan benar.")
             
     if st.sidebar.button("Logout"):
         st.session_state['logged_in'] = False
