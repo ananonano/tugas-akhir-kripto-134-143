@@ -1,6 +1,7 @@
 import streamlit as st
 import mysql.connector 
 import datetime
+from  datetime import timezone, timedelta
 from crypto_modules import des_encrypt, des_decrypt
 import pandas as pd
 from sqlalchemy import text 
@@ -94,7 +95,8 @@ def add_history_entry(user_id, action_type, log_details):
     if conn is None: return False
     
     try:
-        timestamp = datetime.datetime.now()
+        tz_wib = timezone(timedelta(hours=7))
+        timestamp = datetime.datetime.now(tz=tz_wib)
         encrypted_log = des_encrypt(log_details.encode('utf-8'), DB_HISTORY_KEY)
 
         with conn.session as s:
