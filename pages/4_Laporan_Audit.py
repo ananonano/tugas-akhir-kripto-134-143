@@ -13,7 +13,7 @@ if not st.session_state.get('logged_in', False):
 st.title(f"Laporan Audit Keuangan {st.session_state['username']}")
 
 user_id = st.session_state['user_id']
-history_data = get_user_history(user_id) # Ini sudah diurutkan (DESC) oleh database
+history_data = get_user_history(user_id)
 
 total_pemasukan = 0.0
 total_pengeluaran = 0.0
@@ -32,7 +32,7 @@ if not history_data:
     st.info("Log aktivitas Anda akan muncul di sini setelah Anda melakukan aksi.")
     
 else:
-    # --- PASS 1: Hitung Total dan Bangun Peta Tautan ---
+    # PASS 1: Hitung Total dan Bangun Peta Tautan
     for entry in history_data:
         action = entry['action']
         details_str = entry['details']
@@ -58,7 +58,7 @@ else:
                 ts = entry['timestamp'].strftime('%Y-%m-%d %H:%M')
                 display_text = f"[{ts}] "
                 
-                # --- PERBAIKAN IKON ---
+                # PERBAIKAN IKON
                 if action == "CAST-128 Enkripsi Struk":
                     display_text += f"📄 Struk Dienkripsi: {data.get('file_name', 'N/A')} (Hint: {data.get('key_hint', 'N/A')})"
                 elif action == "CAST-128 Dekripsi Struk":
@@ -80,7 +80,7 @@ else:
             if action not in ["Catat Transaksi"]:
                 other_logs.append(entry)
             
-    # --- Tampilkan Ringkasan ---
+    # Tampilkan Ringkasan
     saldo_akhir = total_pemasukan - total_pengeluaran
     st.header("Ringkasan Keuangan")
     st.caption("Dihitung berdasarkan log transaksi yang tersimpan di database.")
@@ -91,7 +91,7 @@ else:
     col3.metric("Saldo Akhir", f"Rp {saldo_akhir:,.2f}", delta=saldo_akhir, delta_color="normal")
     st.divider()
 
-    # --- PASS 2: Tampilkan Log ---
+    # PASS 2: Tampilkan Log
     st.header("Detail Log Transaksi (Tergrup)")
     
     transaction_logs = [e for e in history_data if e['action'] == "Catat Transaksi"]
@@ -108,7 +108,7 @@ else:
             keterangan = data.get('keterangan')
             tx_id = tx['id']
             
-            # --- PERBAIKAN IKON ---
+            # PERBAIKAN IKON
             expander_icon = "🟢" if tipe == "Pemasukan" else "🔴"
             expander_title = f"{expander_icon} **{tx['timestamp'].strftime('%Y-%m-%d %H:%M')}** - **{tipe}** - **{nominal_str}** (ID: {tx_id})"
 
@@ -127,7 +127,7 @@ else:
         except (json.JSONDecodeError, TypeError, ValueError, KeyError):
              st.error(f"Log Transaksi (ID: {tx.get('id', 'N/A')}) rusak atau format lama.")
 
-    # --- BAGIAN 4: Menampilkan Log Lainnya ---
+    # BAGIAN 4: Menampilkan Log Lainnya
     if other_logs:
         st.divider()
         st.header("Log Aktivitas Lainnya (Tidak Terkait)")
