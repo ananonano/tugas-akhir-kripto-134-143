@@ -31,23 +31,20 @@ with tab1:
     if st.button("Simpan dan Enkripsi Transaksi"):
         if keterangan and v_key.isalpha() and len(b_key) >= 8 and nominal > 0:
             try:
-                # 1. Gabungkan data terstruktur menjadi JSON string
                 data = {
                     "tipe": tipe_transaksi,
                     "nominal": nominal,
                     "keterangan": keterangan
                 }
                 plain_text = json.dumps(data)
-                
-                # 2. Enkripsi data JSON tersebut
+
                 encrypted_data = super_encrypt(plain_text, v_key, b_key)
                 encrypted_text = base64.b64encode(encrypted_data).decode('utf-8')
                 
                 st.subheader("Data Transaksi Terenkripsi (Base64):")
                 st.code(encrypted_text, language=None)
                 st.success("Data transaksi berhasil dienkripsi!")
-                
-                # 3. Simpan log untuk audit
+
                 log_data_json_string = json.dumps(data)
                 add_history_entry(user_id, "Catat Transaksi", log_data_json_string)
                 
@@ -72,13 +69,25 @@ with tab2:
                 decrypted_text = super_decrypt(cipher_data, v_key_d, b_key_d)
                 
                 st.subheader("Hasil Dekripsi Transaksi:")
-                
-                # Coba parse JSON
+
                 try:
                     data = json.loads(decrypted_text)
-                    st.json(data)
+                    
+                    tipe = data.get("tipe", "N/A")
+                    nominal = float(data.get("nominal", 0))
+                    keterangan = data.get("keterangan", "N/A")
+
+                    st.info(f"**Tipe Transaksi:** {tipe}")
+                    
+                    if tipe == "Pemasukan":
+                        st.metric(label="Nominal", value=f"Rp {nominal:,.2f}", delta=f"Rp {nominal:,.2f}")
+                    else:
+                        st.metric(label="Nominal", value=f"Rp {nominal:,.2f}", delta=f"-Rp {nominal:,.2f}", delta_color="inverse")
+                        
+                    st.info(f"**Keterangan:** {keterangan}")
+
                 except json.JSONDecodeError:
-                    st.text(decrypted_text)
+                    st.error(f"Gagal mem-parsing JSON. Data mentah: {decrypted_text}")
                 
                 # Simpan history
                 log = f"Mendekripsi data: '{cipher_text_b64[:20]}...'"
