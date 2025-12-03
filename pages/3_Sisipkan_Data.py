@@ -49,7 +49,7 @@ with tab1:
     cover_image = st.file_uploader("Upload Gambar Cover (.png):", type=['png'], key="lsb_cover")
     secret_message = st.text_area("Data Rahasia (misal: ID Transaksi):", key="lsb_msg")
     
-    rc4_key_e = st.text_input("Kunci RC4:", key="lsb_key_e", type="password")
+    rc4_key_e = st.text_input("Kunci RC4(Maks:256 bytes):", key="lsb_key_e", type="password")
     
     if st.button("Sisipkan"):
         if cover_image and secret_message and rc4_key_e:
